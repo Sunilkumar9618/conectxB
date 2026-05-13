@@ -1,6 +1,22 @@
 /* ============================================================================
    ROUTER - Hash-based routing, view management, transitions
    ============================================================================ */
+
+// Handle clean URL paths (e.g., /Homelander211 instead of /#page/Homelander211)
+function handleCleanUrl() {
+    const path = window.location.pathname;
+    
+    // If path is /SomeHandle (not root, not a file)
+    if (path && path !== '/' && !path.includes('.')) {
+        const handle = path.replace('/', '').trim();
+        if (handle) {
+            // Route to public page with this handle
+            router.navigate('page', handle);
+            return true;
+        }
+    }
+    return false;
+}
  
 const router = {
     currentRoute: 'home',

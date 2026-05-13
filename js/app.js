@@ -74,8 +74,11 @@ async function initApp() {
     // Initialize modals and components
     initializeGlobalListeners();
     
-    // Start router
-    await router.start();
+    // Try clean URL first (e.g., /Homelander211), then fall back to hash routing
+    if (!handleCleanUrl()) {
+        // Start router for hash-based routing
+        await router.start();
+    }
     
     // Hide loading screen
     setTimeout(() => {

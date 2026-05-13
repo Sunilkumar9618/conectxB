@@ -105,8 +105,15 @@ const builder = {
     },
 
     deleteBlock(blockId) {
+        const userId = auth.currentUser.uid;
+        
+        // ✅ Delete from Firestore first
+        firebaseService.deleteBlock(userId, this.currentPageId, blockId)
+            .then(() => console.log('✅ Block deleted from Firestore'))
+            .catch(err => console.error('❌ Delete error:', err));
+        
+        // Remove from local array
         this.blocks = this.blocks.filter(b => b.id !== blockId);
-        this.saveBlocks();
         emit('block-deleted', { blockId });
     },
 
@@ -183,7 +190,9 @@ views.builder = async function() {
         }
     }
 
-    const publicUrl = 'connectxb.ai/' + handle;
+    // Use actual domain for clean URLs (works on localhost and production)
+    const baseUrl = window.location.origin;
+    const publicUrl = baseUrl + '/' + handle;
 
     const html = `
         <style>
@@ -1304,8 +1313,8 @@ views.builder = async function() {
                             
                             <div class="builder-domain-url">
                                 <div class="builder-domain-box">🔗 ${publicUrl}</div>
-                                <button class="builder-domain-btn copy" onclick="copyToClipboard('https://${publicUrl}'); showToast('Link copied! 📋', 'success', 2000);">Copy</button>
-                                <button class="builder-domain-btn open" onclick="window.open('#page/${handle}', '_blank');">↗</button>
+                                <button class="builder-domain-btn copy" onclick="copyToClipboard('${publicUrl}'); showToast('Link copied! 📋', 'success', 2000);">Copy</button>
+                                <button class="builder-domain-btn open" onclick="window.open('/${handle}', '_blank');">↗</button>
                             </div>
 
                             <button class="builder-domain-btn share" style="width: 100%;" onclick="shareProfile('${handle}', '${user.name}');">SHARE PROFILE</button>
@@ -1497,7 +1506,68 @@ function updateMobilePreview() {
     }
 }
 
+function renderBlocksList() {
+    const blocksList = document.getElementById('blocks-list');
+    if (!blocksList) return;
 
+    if (builder.blocks.length === 0) {
+        blocksList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <div class="empty-state-title">No blocks yet</div>
+                <div class="empty-state-description">Click "Add" to create your first block</div>
+            </div>`;
+        return;
+    }
+
+    blocksList.innerHTML = builder.blocks.map((block, idx) => `
+        <div class="block-card" data-block-id="${block.id}" data-block-index="${idx}" draggable="true">
+            <span class="block-drag-handle">⋮⋮</span>
+            <div class="block-content">
+                <div class="block-title">${block.type}</div>
+                <div class="block-preview">${renderBlockPreview(block)}</div>
+            </div>
+            <div class="block-actions">
+                <button class="block-action-btn" title="Edit" data-action="edit" data-block-id="${block.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="block-action-btn" title="Toggle visibility" data-action="toggle" data-block-id="${block.id}">
+                    ${block.visible ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>'}
+                </button>
+                <button class="block-action-btn" title="Delete" data-action="delete" data-block-id="${block.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    // Re-attach block action listeners
+    blocksList.querySelectorAll('.block-action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const blockId = btn.dataset.blockId;
+
+            if (action === 'edit') {
+                showEditBlockModal(blockId);
+            } else if (action === 'toggle') {
+                builder.toggleBlockVisibility(blockId);
+                renderBlocksList();
+                updateMobilePreview();
+            } else if (action === 'delete') {
+                if (confirm('Delete this block?')) {
+                    builder.deleteBlock(blockId);
+                    renderBlocksList();      // ✅ re-render left panel
+                    updateMobilePreview();   // ✅ re-render phone mockup
+                }
+            }
+        });
+    });
+
+    // Update block count in navbar
+    const statEl = document.querySelector('.builder-nav-stat strong');
+    if (statEl) statEl.textContent = builder.blocks.length;
+}
 
 function initBuilderView() {
     const handle = builder.currentHandle;
@@ -1593,28 +1663,7 @@ function initBuilderView() {
         });
     }
 
-    // Block actions
-    document.querySelectorAll('.block-action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const action = btn.dataset.action;
-            const blockId = btn.dataset.blockId;
-            
-            if (action === 'edit') {
-                showEditBlockModal(blockId);
-            } else if (action === 'toggle') {
-                builder.toggleBlockVisibility(blockId);
-                builder.saveBlocks();
-                updateMobilePreview();
-            } else if (action === 'delete') {
-                if (confirm('Delete this block?')) {
-                    builder.deleteBlock(blockId);
-                    builder.saveBlocks();
-                    updateMobilePreview();
-                }
-            }
-        });
-    });
+    // Block actions — now handled inside renderBlocksList()
 
     // Drag & drop
     const blocksList = document.getElementById('blocks-list');
@@ -1667,6 +1716,9 @@ function initBuilderView() {
         theme.updateUserTheme(handle, { textColor: e.target.value });
         setTimeout(() => router.loadView('builder'), 100);
     });
+
+    // Re-render blocks list at the end
+    renderBlocksList();
 }
 
 function showAddBlockModal() {
@@ -1696,6 +1748,7 @@ function showAddBlockModal() {
     window.addBlockType = (type) => {
         builder.addBlock(type, {});
         modal.close();
+        renderBlocksList();    // ✅ add this
         updateMobilePreview();
     };
 
@@ -1813,6 +1866,7 @@ function showEditBlockModal(blockId) {
                     }
                     
                     builder.updateBlock(blockId, updates);
+                    renderBlocksList();        // ✅ add this
                     updateMobilePreview();
                     modal.close();
                 }
