@@ -157,15 +157,15 @@ function renderLayout(content, options = {}) {
 }
  
 function renderNavbar() {
-    const session = getFromStorage('jsbeacons_session');
     const isDarkMode = getFromStorage('jsbeacons_theme', { mode: 'dark' }).mode === 'dark';
+    const isLoggedIn = auth.isLoggedIn(); // Use Firebase auth state
     
     return `
         <nav class="navbar">
             <div class="navbar-logo" onclick="router.navigate('home')">✦ connectxB</div>
             <ul class="navbar-nav">
                 <li><a href="#home" ${getHashRoute().route === 'home' ? 'class="active"' : ''}>Home</a></li>
-                ${session && session.loggedIn ? `
+                ${isLoggedIn ? `
                     <li><a href="#dashboard" ${getHashRoute().route === 'dashboard' ? 'class="active"' : ''}>Dashboard</a></li>
                     <li><a href="#builder" ${getHashRoute().route === 'builder' ? 'class="active"' : ''}>Builder</a></li>
                 ` : `
@@ -176,8 +176,8 @@ function renderNavbar() {
                 <button class="btn btn-icon" id="theme-toggle-navbar" style="background: none; border: none; font-size: 20px;" title="Toggle theme">
                     ${isDarkMode ? '☀️' : '🌙'}
                 </button>
-                ${session && session.loggedIn ? `
-                    <button class="btn btn-secondary btn-small" onclick="router.navigate('auth'); auth.logout();">Logout</button>
+                ${isLoggedIn ? `
+                    <button class="btn btn-secondary btn-small" onclick="auth.logout(); router.navigate('home');">Logout</button>
                 ` : `
                     <button class="btn btn-primary" onclick="router.navigate('auth')">Get Started</button>
                 `}
@@ -192,15 +192,14 @@ function renderNavbar() {
 }
  
 function renderSidebar(user, navItems) {
-    const session = getFromStorage('jsbeacons_session');
-    const handle = session?.handle || 'User';
-    const userData = getFromStorage('beacons_users', {})[handle] || {};
+    // Use the user object passed to the function (Firebase data)
+    const userDisplay = user || { name: 'User', handle: 'user' };
     
     return `
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-profile">
-                <div class="sidebar-avatar">${getInitials(userData.name || 'User')}</div>
-                <div class="sidebar-handle">@${handle}</div>
+                <div class="sidebar-avatar">${getInitials(userDisplay.name)}</div>
+                <div class="sidebar-handle">@${userDisplay.handle}</div>
             </div>
             <nav>
                 <ul class="sidebar-nav">

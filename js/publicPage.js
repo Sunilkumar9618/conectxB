@@ -6,9 +6,6 @@ views.publicPage = async function(handle) {
     console.log('=== PUBLIC PAGE DEBUG ===');
     console.log('Handle parameter received:', handle);
     console.log('Route info:', getHashRoute());
-    console.log('Users in storage:', getFromStorage('beacons_users', {}));
-    
-    const users = getFromStorage('beacons_users', {});
     
     if (!handle) {
         console.log('❌ No handle provided!');
@@ -16,33 +13,100 @@ views.publicPage = async function(handle) {
         return '';
     }
     
-    const user = users[handle];
-    console.log('User found:', user);
-    
-    if (!user) {
-        return `
-            <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary);">
-                <div class="empty-state">
-                    <div class="empty-state-icon">👤</div>
-                    <h3 class="empty-state-title">Profile not found</h3>
-                    <button class="btn btn-primary" onclick="router.navigate('home')">← Back Home</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    const allBlocks = getFromStorage('beacons_blocks', {});
-    const blocks = allBlocks[handle] || [];
-    const allProducts = getFromStorage('beacons_products', {});
-    const products = allProducts[handle] || [];
-    
-    const themes = getFromStorage('beacons_theme', {});
-    const userTheme = themes[handle] || {
+    // Try to get user from Firestore first, then fallback to localStorage
+    let user = null;
+    let blocks = [];
+    let products = [];
+    let userTheme = {
         bg: 'linear-gradient(135deg, #1d8f7f, #17a697)',
         btnColor: '#17a697',
         textColor: '#FFFFFF',
         btnStyle: 'rounded'
     };
+    let avatar = '';
+    
+    try {
+        // Try to fetch from Firestore
+        if (typeof fbDb !== 'undefined' && typeof firebaseService !== 'undefined') {
+            const userDoc = await fbDb.collection('users').where('handle', '==', handle).get();
+            if (!userDoc.empty) {
+                user = userDoc.docs[0].data();
+                user.uid = userDoc.docs[0].id;
+                console.log('✅ User loaded from Firestore:', user);
+                
+                // Load blocks from Firestore using correct path (pages/{pageId}/blocks)
+                try {
+                    const pages = await firebaseService.getUserPages(user.uid);
+                    console.log('📄 Pages found:', pages.length);
+                    
+                    // Load blocks from all pages (usually just "main" page)
+                    for (const page of pages) {
+                        const pageBlocks = await firebaseService.getPageBlocks(user.uid, page.id);
+                        console.log(`✅ Blocks loaded from page ${page.id}:`, pageBlocks.length);
+                        blocks = blocks.concat(pageBlocks);
+                    }
+                } catch (blockError) {
+                    console.warn('⚠️ Error loading blocks:', blockError.message);
+                    blocks = [];
+                }
+                
+                // Load products from Firestore
+                try {
+                    products = await firebaseService.getUserProducts(user.uid);
+                    console.log('✅ Products loaded:', products.length);
+                } catch (productError) {
+                    console.warn('⚠️ Error loading products:', productError.message);
+                    products = [];
+                }
+                
+                // Load custom theme from user profile (persisted in Firestore)
+                if (user.theme) {
+                    userTheme = { ...userTheme, ...user.theme };
+                    console.log('✅ Custom theme loaded from user profile:', userTheme);
+                } else {
+                    console.log('ℹ️ Using default theme');
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to load from Firestore, trying localStorage:', error.message);
+    }
+    
+    // Fallback to localStorage if Firestore data not found
+    if (!user) {
+        const users = getFromStorage('beacons_users', {});
+        user = users[handle];
+        console.log('User from localStorage:', user);
+        
+        if (!user) {
+            console.log('❌ User not found in either Firestore or localStorage!');
+            return `
+                <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary);">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <h3 class="empty-state-title">Profile not found</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">The user <strong>@${handle}</strong> doesn't exist</p>
+                        <button class="btn btn-primary" onclick="router.navigate('home')">← Back Home</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Load from localStorage as fallback
+        const allBlocks = getFromStorage('beacons_blocks', {});
+        blocks = allBlocks[handle] || [];
+        
+        const allProducts = getFromStorage('beacons_products', {});
+        products = allProducts[handle] || [];
+        
+        const themes = getFromStorage('beacons_theme', {});
+        userTheme = themes[handle] || userTheme;
+    }
+    
+    // Get avatar from user profile (Firestore now includes it)
+    avatar = user?.avatar || '';
+    
+    console.log('✅ User profile loaded successfully');
     
     // Get social block
     const socialBlock = blocks.find(b => b.type === 'social' && b.visible);
@@ -805,7 +869,7 @@ views.publicPage = async function(handle) {
                     <!-- Avatar Section -->
                     <div id="public-avatar-section">
                         <div id="public-avatar-img">
-                            ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}">` : getInitials(user.name || 'User')}
+                            ${avatar ? `<img src="${avatar}" alt="${user.name}">` : getInitials(user.name || 'User')}
                         </div>
                         <div>
                             <h1 id="public-name">${user.name || 'Your Name'}</h1>

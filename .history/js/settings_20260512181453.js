@@ -1,0 +1,340 @@
+/* ============================================================================
+   SETTINGS - User Settings, Profile, Account Management
+   ============================================================================ */
+
+const settings = {
+    currentHandle: null,
+    
+    // Initialize settings
+    init(handle) {
+        this.currentHandle = handle;
+    }
+};
+
+// ---- RENDER SETTINGS VIEW ----
+
+views.settings = async function() {
+    if (!auth.isLoggedIn()) {
+        await router.navigate('auth');
+        return '';
+    }
+    
+    const profile = auth.currentUser?.profile || {};
+    const handle = profile.handle;
+    const avatars = getFromStorage('beacons_avatars', {});
+    const avatar = avatars[handle] || '';
+    
+    const user = {
+        name: profile.name || 'User',
+        email: profile.email || auth.currentUser?.email,
+        handle: profile.handle,
+        bio: profile.bio || '',
+        avatar: avatar
+    };
+    
+    settings.init(user.handle);
+    
+    const sidebarNav = [
+        { icon: '📄', label: 'Page', href: 'builder' },
+        { icon: '🛍️', label: 'Store', href: 'store' },
+        { icon: '📈', label: 'Analytics', href: 'analytics' },
+        { icon: '⚙️', label: 'Settings', href: 'settings' }
+    ];
+    
+    const themeSetting = getFromStorage('jsbeacons_theme', {}).mode || 'dark';
+    
+    const html = `
+        ${renderNavbar()}
+        ${renderSidebar(user, sidebarNav)}
+        <div class="main-content with-sidebar">
+            <div style="max-width: 800px; padding: var(--spacing-xl);">
+                <h1>Settings</h1>
+                
+                <!-- Profile Section -->
+                <div class="card" style="margin-bottom: var(--spacing-2xl);">
+                    <div class="card-header">
+                        <h3 class="card-title">Profile</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label class="form-label">Profile Picture</label>
+                            <div style="margin-bottom: 16px;">
+                                <div id="avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin-bottom: 12px;">
+                                    ${user.avatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (user.name[0] || 'U')}
+                                </div>
+                            </div>
+                            <input type="file" class="form-input" id="settings-avatar" accept="image/*" style="cursor: pointer;">
+                            <div class="form-hint">Upload a JPG or PNG image (max 2MB)</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" class="form-input" id="settings-name" value="${user.name}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Bio</label>
+                            <textarea class="form-textarea" id="settings-bio" placeholder="Tell your story...">${user.bio || ''}</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Handle</label>
+                            <input type="text" class="form-input" value="@${user.handle}" disabled>
+                        </div>
+                        
+                        <button class="btn btn-primary" id="save-profile-btn">Save Profile</button>
+                    </div>
+                </div>
+                
+                <!-- Account Section -->
+                <div class="card" style="margin-bottom: var(--spacing-2xl);">
+                    <div class="card-header">
+                        <h3 class="card-title">Account</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="settings-email" value="${user.email || 'user@example.com'}" disabled>
+                            <div class="form-hint">Email cannot be changed</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-input" id="settings-current-pwd" placeholder="Enter your current password">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-input" id="settings-new-pwd" placeholder="New password (min. 6 characters)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-input" id="settings-confirm-pwd" placeholder="Confirm new password">
+                        </div>
+                        
+                        <button class="btn btn-secondary" id="change-password-btn">Change Password</button>
+                    </div>
+                </div>
+                
+                <!-- Appearance Section -->
+                <div class="card" style="margin-bottom: var(--spacing-2xl);">
+                    <div class="card-header">
+                        <h3 class="card-title">Appearance</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label class="form-label">Theme</label>
+                            <div style="display: flex; gap: 12px; margin-top: 12px;">
+                                <button class="btn btn-secondary ${themeSetting === 'dark' ? '' : 'btn-primary'}" id="theme-dark-btn" onclick="theme.setMode('dark')">🌙 Dark</button>
+                                <button class="btn btn-secondary ${themeSetting === 'light' ? '' : ''}" id="theme-light-btn" onclick="theme.setMode('light')">☀️ Light</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Integrations Section -->
+                <div class="card" style="margin-bottom: var(--spacing-2xl);">
+                    <div class="card-header">
+                        <h3 class="card-title">Integrations</h3>
+                    </div>
+                    <div class="card-content">
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 4px;">Mailchimp</div>
+                                <div style="font-size: 14px; color: var(--text-secondary);">Email newsletter integration</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span></span>
+                            </label>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 4px;">Stripe</div>
+                                <div style="font-size: 14px; color: var(--text-secondary);">Payment processing</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span></span>
+                            </label>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 4px;">Zapier</div>
+                                <div style="font-size: 14px; color: var(--text-secondary);">Workflow automation</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Danger Zone -->
+                <div class="card" style="border-color: var(--error);">
+                    <div class="card-header">
+                        <h3 class="card-title" style="color: var(--error);">Danger Zone</h3>
+                    </div>
+                    <div class="card-content">
+                        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                            Deleting your account is permanent and cannot be undone. All your data will be permanently deleted.
+                        </p>
+                        <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        initSettingsView();
+    }, 10);
+    
+    return html;
+};
+
+function initSettingsView() {
+    const handle = auth.getCurrentHandle();
+    
+    // Image preview and upload
+    const avatarInput = document.getElementById('settings-avatar');
+    const avatarPreview = document.getElementById('avatar-preview');
+    
+    if (avatarInput) {
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image must be less than 2MB', 'error');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload a valid image file', 'error');
+                return;
+            }
+            
+            // Convert to base64
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target.result;
+                
+                // Update preview
+                avatarPreview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                
+                // Store in data attribute for saving
+                avatarInput.dataset.base64 = base64;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // Save profile
+    document.getElementById('save-profile-btn')?.addEventListener('click', async () => {
+        const name = document.getElementById('settings-name').value;
+        const bio = document.getElementById('settings-bio').value;
+        const avatarBase64 = avatarInput?.dataset.base64;
+        
+        if (!name) {
+            showToast('Name is required', 'error');
+            return;
+        }
+        
+        // Update profile (name and bio go to Firestore)
+        const updates = { name, bio };
+        
+        // Save to auth (which updates Firestore)
+        const result = await auth.updateProfile(updates);
+        
+        if (result.success) {
+            // Store avatar in localStorage only (not Firestore - too large)
+            if (avatarBase64) {
+                const avatars = getFromStorage('beacons_avatars', {});
+                avatars[handle] = avatarBase64;
+                saveToStorage('beacons_avatars', avatars);
+            }
+            
+            // Also update localStorage users for immediate persistence
+            const users = getFromStorage('beacons_users', {});
+            if (users[handle]) {
+                users[handle] = { ...users[handle], ...updates };
+                saveToStorage('beacons_users', users);
+            }
+            
+            showToast('Profile saved ✓', 'success');
+            // Clear avatar input for next upload
+            if (avatarInput) {
+                avatarInput.value = '';
+                delete avatarInput.dataset.base64;
+            }
+        } else {
+            showToast(result.error || 'Failed to save profile', 'error');
+        }
+    });
+    
+    // Change password
+    document.getElementById('change-password-btn')?.addEventListener('click', async () => {
+        const currentPwd = document.getElementById('settings-current-pwd').value;
+        const newPwd = document.getElementById('settings-new-pwd').value;
+        const confirmPwd = document.getElementById('settings-confirm-pwd').value;
+        
+        if (!currentPwd || !newPwd || !confirmPwd) {
+            showToast('All password fields are required', 'error');
+            return;
+        }
+        
+        if (newPwd !== confirmPwd) {
+            showToast('New passwords do not match', 'error');
+            return;
+        }
+        
+        if (newPwd.length < 6) {
+            showToast('New password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        const result = await auth.changePassword(currentPwd, newPwd);
+        
+        if (result.success) {
+            // Clear inputs
+            document.getElementById('settings-current-pwd').value = '';
+            document.getElementById('settings-new-pwd').value = '';
+            document.getElementById('settings-confirm-pwd').value = '';
+            
+            showToast('Password changed ✓', 'success');
+        } else {
+            showToast(result.error || 'Failed to change password', 'error');
+        }
+    });
+    
+    // Delete account
+    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+        const confirmed = await showConfirm(
+            'This will permanently delete your account and all associated data. This action cannot be undone.',
+            {
+                title: 'Delete Account',
+                confirmText: 'Delete Permanently',
+                cancelText: 'Cancel',
+                type: 'danger',
+                onConfirm: () => {
+                    auth.deleteAccount();
+                    showToast('Account deleted', 'info');
+                }
+            }
+        );
+    });
+    
+    // Hamburger menu
+    const hamburger = document.getElementById('hamburger-menu');
+    const sidebar = document.getElementById('sidebar');
+    hamburger?.addEventListener('click', () => {
+        sidebar?.classList.toggle('visible');
+    });
+}

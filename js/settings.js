@@ -14,18 +14,24 @@ const settings = {
 // ---- RENDER SETTINGS VIEW ----
 
 views.settings = async function() {
-    const session = getFromStorage('jsbeacons_session');
-    const handle = session?.handle;
-    
-    if (!handle) {
+    if (!auth.isLoggedIn()) {
         await router.navigate('auth');
         return '';
     }
     
-    settings.init(handle);
+    const profile = auth.currentUser?.profile || {};
+    const handle = profile.handle;
+    const avatar = profile.avatar || '';
     
-    const users = getFromStorage('beacons_users', {});
-    const user = users[handle] || { name: 'User' };
+    const user = {
+        name: profile.name || 'User',
+        email: profile.email || auth.currentUser?.email,
+        handle: profile.handle,
+        bio: profile.bio || '',
+        avatar: avatar
+    };
+    
+    settings.init(user.handle);
     
     const sidebarNav = [
         { icon: '📄', label: 'Page', href: 'builder' },
@@ -50,6 +56,17 @@ views.settings = async function() {
                     </div>
                     <div class="card-content">
                         <div class="form-group">
+                            <label class="form-label">Profile Picture</label>
+                            <div style="margin-bottom: 16px;">
+                                <div id="avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 32px; margin-bottom: 12px;">
+                                    ${user.avatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (user.name[0] || 'U')}
+                                </div>
+                            </div>
+                            <input type="file" class="form-input" id="settings-avatar" accept="image/*" style="cursor: pointer;">
+                            <div class="form-hint">Upload a JPG or PNG image (max 2MB)</div>
+                        </div>
+                        
+                        <div class="form-group">
                             <label class="form-label">Display Name</label>
                             <input type="text" class="form-input" id="settings-name" value="${user.name}">
                         </div>
@@ -61,7 +78,7 @@ views.settings = async function() {
                         
                         <div class="form-group">
                             <label class="form-label">Handle</label>
-                            <input type="text" class="form-input" value="@${handle}" disabled>
+                            <input type="text" class="form-input" value="@${user.handle}" disabled>
                         </div>
                         
                         <button class="btn btn-primary" id="save-profile-btn">Save Profile</button>
@@ -76,7 +93,7 @@ views.settings = async function() {
                     <div class="card-content">
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-input" id="settings-email" value="${user.email}" disabled>
+                            <input type="email" class="form-input" id="settings-email" value="${user.email || 'user@example.com'}" disabled>
                             <div class="form-hint">Email cannot be changed</div>
                         </div>
                         
@@ -182,22 +199,83 @@ views.settings = async function() {
 function initSettingsView() {
     const handle = auth.getCurrentHandle();
     
+    // Image preview and upload
+    const avatarInput = document.getElementById('settings-avatar');
+    const avatarPreview = document.getElementById('avatar-preview');
+    
+    if (avatarInput) {
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image must be less than 2MB', 'error');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showToast('Please upload a valid image file', 'error');
+                return;
+            }
+            
+            // Convert to base64
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target.result;
+                
+                // Update preview
+                avatarPreview.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                
+                // Store in data attribute for saving
+                avatarInput.dataset.base64 = base64;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
     // Save profile
-    document.getElementById('save-profile-btn')?.addEventListener('click', () => {
+    document.getElementById('save-profile-btn')?.addEventListener('click', async () => {
         const name = document.getElementById('settings-name').value;
         const bio = document.getElementById('settings-bio').value;
+        const avatarBase64 = avatarInput?.dataset.base64;
         
         if (!name) {
             showToast('Name is required', 'error');
             return;
         }
         
-        auth.updateProfile({ name, bio });
-        showToast('Profile saved ✓', 'success');
+        // Update profile (name, bio, and avatar go to Firestore)
+        const updates = { name, bio };
+        
+        // If avatar was uploaded, include it in updates
+        if (avatarBase64) {
+            updates.avatar = avatarBase64;
+        }
+        
+        // Save to auth (which updates Firestore)
+        const result = await auth.updateProfile(updates);
+        
+        if (result.success) {
+            // Update auth.currentUser.profile with new data
+            if (auth.currentUser.profile) {
+                auth.currentUser.profile = { ...auth.currentUser.profile, ...updates };
+            }
+            
+            showToast('Profile saved ✓', 'success');
+            // Clear avatar input for next upload
+            if (avatarInput) {
+                avatarInput.value = '';
+                delete avatarInput.dataset.base64;
+            }
+        } else {
+            showToast(result.error || 'Failed to save profile', 'error');
+        }
     });
     
     // Change password
-    document.getElementById('change-password-btn')?.addEventListener('click', () => {
+    document.getElementById('change-password-btn')?.addEventListener('click', async () => {
         const currentPwd = document.getElementById('settings-current-pwd').value;
         const newPwd = document.getElementById('settings-new-pwd').value;
         const confirmPwd = document.getElementById('settings-confirm-pwd').value;
@@ -212,19 +290,23 @@ function initSettingsView() {
             return;
         }
         
-        const result = auth.changePassword(currentPwd, newPwd);
-        
-        if (result.error) {
-            showToast(result.error, 'error');
+        if (newPwd.length < 6) {
+            showToast('New password must be at least 6 characters', 'error');
             return;
         }
         
-        // Clear inputs
-        document.getElementById('settings-current-pwd').value = '';
-        document.getElementById('settings-new-pwd').value = '';
-        document.getElementById('settings-confirm-pwd').value = '';
+        const result = await auth.changePassword(currentPwd, newPwd);
         
-        showToast('Password changed ✓', 'success');
+        if (result.success) {
+            // Clear inputs
+            document.getElementById('settings-current-pwd').value = '';
+            document.getElementById('settings-new-pwd').value = '';
+            document.getElementById('settings-confirm-pwd').value = '';
+            
+            showToast('Password changed ✓', 'success');
+        } else {
+            showToast(result.error || 'Failed to change password', 'error');
+        }
     });
     
     // Delete account

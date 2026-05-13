@@ -17,27 +17,69 @@ const LOGO_CONFIG = {
 
 const builder = {
     currentHandle: null,
+    currentPageId: 'main',
     blocks: [],
     draggedBlock: null,
 
-    init(handle) {
-        this.currentHandle = handle;
-        this.loadBlocks();
-    },
+    async init(handle) {
+   this.currentHandle = handle;
+   await this.loadBlocks();
+},
 
-    loadBlocks() {
-        const handle = this.currentHandle;
-        const allBlocks = getFromStorage('beacons_blocks', {});
-        this.blocks = allBlocks[handle] || [];
-    },
+    async loadBlocks() {
+    const userId = auth.currentUser.uid;
+    const pageId = 'main';
 
-    saveBlocks() {
-        const handle = this.currentHandle;
-        let allBlocks = getFromStorage('beacons_blocks', {});
-        allBlocks[handle] = this.blocks;
-        setToStorage('beacons_blocks', allBlocks);
-        showToast('Page saved ✓', 'success', 2000);
-    },
+    try {
+        // Try to get existing pages
+        const pages = await firebaseService.getUserPages(userId);
+
+        // If pages exist, use the first one; otherwise use default 'main'
+        if (pages.length > 0) {
+            this.currentPageId = pages[0].id;
+        } else {
+            // Create default 'main' page if it doesn't exist
+            await firebaseService.savePage(userId, pageId, {
+                name: 'Home',
+                description: 'Your main profile page'
+            });
+            this.currentPageId = pageId;
+            console.log('✅ Default page created');
+        }
+
+        // Load blocks from the page
+        const blocks = await firebaseService.getPageBlocks(
+            userId,
+            this.currentPageId
+        );
+        this.blocks = blocks || [];
+        console.log(`✅ Loaded ${this.blocks.length} blocks from page ${this.currentPageId}`);
+    } catch (error) {
+        console.error('❌ Error loading blocks:', error.message);
+        this.blocks = [];
+    }
+},
+
+    async saveBlocks() {
+    const userId = auth.currentUser.uid;
+
+    try {
+        // Save each block to Firestore
+        for (const block of this.blocks) {
+            await firebaseService.saveBlock(
+                userId,
+                this.currentPageId,
+                block.id,
+                block
+            );
+        }
+        console.log(`✅ Saved ${this.blocks.length} blocks to page ${this.currentPageId}`);
+        showToast('Page saved ✓', 'success', 1500);
+    } catch (error) {
+        console.error('❌ Error saving blocks:', error.message);
+        showToast('Error saving blocks: ' + error.message, 'error');
+    }
+},
 
     addBlock(type, data = {}) {
         const block = {
@@ -97,26 +139,49 @@ const builder = {
 // ---- RENDER BUILDER VIEW ----
 
 views.builder = async function() {
-    const session = getFromStorage('jsbeacons_session');
-    const handle = session?.handle;
+    if (!auth.isLoggedIn()) {
+        await router.navigate('auth');
+        return '';
+    }
+
+    const profile = auth.currentUser?.profile || {};
+    const handle = profile.handle;
 
     if (!handle) {
         await router.navigate('auth');
         return '';
     }
 
-    builder.init(handle);
+    await builder.init(handle);
+    
+    // Get avatar from Firestore profile
+    const avatar = profile.avatar || '';
 
-    const users = getFromStorage('beacons_users', {});
-    const user = users[handle] || { name: 'User' };
+    const user = {
+        name: profile.name || 'User',
+        email: profile.email || auth.currentUser?.email,
+        handle: profile.handle,
+        bio: profile.bio || '',
+        avatar: avatar
+    };
 
-    const themes = getFromStorage('beacons_theme', {});
-    const userTheme = themes[handle] || {
+    // Load user's custom theme from Firestore (source of truth)
+    let userTheme = {
         bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         btnColor: '#667eea',
         textColor: '#FFFFFF',
         btnStyle: 'rounded'
     };
+    
+    if (auth.currentUser?.profile?.theme) {
+        userTheme = { ...userTheme, ...auth.currentUser.profile.theme };
+        console.log('✅ Loaded custom theme from Firestore:', userTheme);
+    } else {
+        const themes = getFromStorage('beacons_theme', {});
+        if (themes[handle]) {
+            userTheme = { ...userTheme, ...themes[handle] };
+        }
+    }
 
     const publicUrl = 'connectxb.ai/' + handle;
 
@@ -371,6 +436,7 @@ views.builder = async function() {
                 transition: all 0.3s ease;
                 border: 2px solid rgba(102, 126, 234, 0.3);
                 overflow: hidden;
+                flex-shrink: 0;
             }
 
             .builder-avatar-preview:hover {
@@ -383,6 +449,8 @@ views.builder = async function() {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                display: block;
+                border-radius: 50%;
             }
 
             /* ===== FORM ELEMENTS ===== */
@@ -1124,7 +1192,7 @@ views.builder = async function() {
                         📦 <strong>${builder.blocks.length}</strong> Blocks
                     </div>
                     <button class="builder-nav-btn secondary" onclick="router.navigate('dashboard')"><i class="fas fa-arrow-left"></i> Dashboard</button>
-                    <button class="builder-nav-btn primary" onclick="window.open('#page/${handle}', '_blank')"><i class="fas fa-eye"></i> Preview</button>
+                    <button class="builder-nav-btn primary" onclick="window.open(window.location.origin + window.location.pathname + '#page/${handle}', '_blank')"><i class="fas fa-eye"></i> Preview</button>
                 </div>
             </div>
 
@@ -1346,6 +1414,91 @@ function getInitials(name) {
         .substring(0, 2);
 }
 
+function updateMobilePreview() {
+    const handle = builder.currentHandle;
+    const nameInput = document.getElementById('builder-name');
+    const bioInput = document.getElementById('builder-bio');
+    
+    if (!nameInput || !bioInput) return;
+    
+    // ===== UPDATE LEFT PANEL AVATAR PREVIEW =====
+    const leftAvatarPreview = document.querySelector('.builder-avatar-preview');
+    if (leftAvatarPreview) {
+        const avatar = auth.currentUser?.profile?.avatar;
+        if (avatar) {
+            leftAvatarPreview.style.background = 'transparent';
+            leftAvatarPreview.innerHTML = `<img src="${avatar}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: block;">`;
+        } else {
+            leftAvatarPreview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            leftAvatarPreview.textContent = getInitials(nameInput.value || 'User');
+        }
+    }
+    
+    // ===== UPDATE MOBILE MOCKUP =====
+    const phoneContent = document.querySelector('.phone-content');
+    if (!phoneContent) return;
+    
+    // Update name
+    const nameH2 = phoneContent.querySelector('h2');
+    if (nameH2) {
+        nameH2.textContent = nameInput.value || 'Your Name';
+    }
+    
+    // Update handle and bio (paragraphs after h2)
+    const allParagraphs = phoneContent.querySelectorAll('p');
+    if (allParagraphs.length >= 2) {
+        // First p is the handle, second p is the bio (if it exists)
+        allParagraphs[allParagraphs.length - 1].textContent = bioInput.value;
+    }
+    
+    // Update avatar in phone mockup
+    const phoneAvatarDiv = phoneContent.querySelector('div[style*="width: 100px"]');
+    if (phoneAvatarDiv) {
+        const avatar = auth.currentUser?.profile?.avatar;
+        if (avatar) {
+            phoneAvatarDiv.innerHTML = `<img src="${avatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        } else {
+            phoneAvatarDiv.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">${getInitials(nameInput.value || 'User')}</div>`;
+        }
+    }
+    
+    // Update blocks section
+    const userTheme = auth.currentUser?.profile?.theme || { 
+        bg: '#667eea', 
+        btnColor: '#667eea', 
+        textColor: '#ffffff' 
+    };
+    const visibleBlocks = builder.blocks.filter(b => b.type !== 'social' && b.visible);
+    
+    // Find the blocks container (look for the div with social links or empty state)
+    const allContentDivs = phoneContent.querySelectorAll('div[style*="padding"]');
+    let blocksContainer = null;
+    
+    for (let div of allContentDivs) {
+        if (div.textContent.includes('Add blocks to get started') || 
+            div.innerHTML.includes('🛍️') ||
+            div.innerHTML.includes('🔗')) {
+            blocksContainer = div;
+            break;
+        }
+    }
+    
+    if (blocksContainer) {
+        if (visibleBlocks.length === 0) {
+            blocksContainer.innerHTML = `<div style="padding: 24px 16px; text-align: center; opacity: 0.6;"><div style="font-size: 36px; margin-bottom: 8px;">+</div><div style="font-size: 12px;">Add blocks to get started</div></div>`;
+        } else {
+            blocksContainer.innerHTML = '<div style="padding: 0 12px 24px;">' + 
+                visibleBlocks.map(block => {
+                    const icon = block.type === 'product' ? '🛍️' : (block.data?.icon || '🔗');
+                    return `<div style="padding: 8px 0;"><div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 14px 16px; border-radius: 10px; color: ${userTheme.textColor}; text-align: center; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.3s;">${icon} ${block.data?.title || block.type}</div></div>`;
+                }).join('') +
+            '</div>';
+        }
+    }
+}
+
+
+
 function initBuilderView() {
     const handle = builder.currentHandle;
 
@@ -1357,13 +1510,33 @@ function initBuilderView() {
     const bioInput = document.getElementById('builder-bio');
 
     const saveProfile = debounce(() => {
+        // Save to Firebase
         auth.updateProfile({ name: nameInput.value, bio: bioInput.value });
+        
+        // Update localStorage
+        const users = getFromStorage('beacons_users', {});
+        if (users[handle]) {
+            users[handle].name = nameInput.value;
+            users[handle].bio = bioInput.value;
+            saveToStorage('beacons_users', users);
+        }
+        
+        // Update preview in real-time
+        updateMobilePreview();
         showToast('Profile saved ✓', 'success', 2000);
-        setTimeout(() => router.loadView('builder'), 100);
     }, 500);
 
-    nameInput?.addEventListener('input', saveProfile);
-    bioInput?.addEventListener('input', saveProfile);
+    nameInput?.addEventListener('input', () => {
+        // Update preview immediately while typing
+        updateMobilePreview();
+        saveProfile();
+    });
+    
+    bioInput?.addEventListener('input', () => {
+        // Update preview immediately while typing
+        updateMobilePreview();
+        saveProfile();
+    });
 
     // Avatar upload
     const avatarUpload = document.getElementById('avatar-upload');
@@ -1371,12 +1544,49 @@ function initBuilderView() {
         avatarUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
+                // Validate file size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('Image must be less than 2MB', 'error');
+                    return;
+                }
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showToast('Please upload a valid image file', 'error');
+                    return;
+                }
+                
                 const reader = new FileReader();
-                reader.onload = (event) => {
+                reader.onload = async (event) => {
                     const avatarData = event.target.result;
-                    auth.updateProfile({ avatar: avatarData });
-                    showToast('Avatar updated ✓', 'success', 2000);
-                    setTimeout(() => router.loadView('builder'), 100);
+                    
+                    // Store avatar in Firestore profile
+                    const uid = auth.currentUser?.uid;
+                    if (uid) {
+                        const result = await firebaseService.updateUserProfile(uid, {
+                            avatar: avatarData
+                        });
+                        
+                        if (result.success) {
+                            // Update auth.currentUser.profile
+                            if (auth.currentUser.profile) {
+                                auth.currentUser.profile.avatar = avatarData;
+                            }
+                            
+                            // Update the avatar preview in left panel - REMOVE GRADIENT & SHOW IMAGE
+                            const avatarPreview = document.querySelector('.builder-avatar-preview');
+                            if (avatarPreview) {
+                                avatarPreview.style.background = 'transparent';
+                                avatarPreview.innerHTML = `<img src="${avatarData}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; display: block;">`;
+                            }
+                            
+                            // Update preview
+                            updateMobilePreview();
+                            showToast('Avatar updated ✓', 'success', 1500);
+                        } else {
+                            showToast('Error uploading avatar: ' + result.error, 'error');
+                        }
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -1394,11 +1604,13 @@ function initBuilderView() {
                 showEditBlockModal(blockId);
             } else if (action === 'toggle') {
                 builder.toggleBlockVisibility(blockId);
-                setTimeout(() => router.loadView('builder'), 100);
+                builder.saveBlocks();
+                updateMobilePreview();
             } else if (action === 'delete') {
                 if (confirm('Delete this block?')) {
                     builder.deleteBlock(blockId);
-                    setTimeout(() => router.loadView('builder'), 100);
+                    builder.saveBlocks();
+                    updateMobilePreview();
                 }
             }
         });
@@ -1428,7 +1640,8 @@ function initBuilderView() {
                 if (targetCard) {
                     const newIndex = allCards.indexOf(targetCard);
                     builder.reorderBlocks(builder.draggedBlock.index, newIndex);
-                    setTimeout(() => router.loadView('builder'), 100);
+                    builder.saveBlocks();
+                    updateMobilePreview();
                 }
             }
         });
@@ -1483,7 +1696,7 @@ function showAddBlockModal() {
     window.addBlockType = (type) => {
         builder.addBlock(type, {});
         modal.close();
-        setTimeout(() => router.loadView('builder'), 100);
+        updateMobilePreview();
     };
 
     modal.open();
@@ -1600,8 +1813,8 @@ function showEditBlockModal(blockId) {
                     }
                     
                     builder.updateBlock(blockId, updates);
-                    showToast('Block updated ✓', 'success', 2000);
-                    setTimeout(() => router.loadView('builder'), 100);
+                    updateMobilePreview();
+                    modal.close();
                 }
             }
         ]

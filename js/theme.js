@@ -81,6 +81,17 @@ const theme = {
         };
         
         setToStorage('beacons_theme', themes);
+        
+        // ALSO save to Firestore for persistence
+        if (auth.isLoggedIn()) {
+            const userId = auth.currentUser.uid;
+            firebaseService.updateUserProfile(userId, { 
+                theme: themes[handle] 
+            }).catch(error => {
+                console.error('❌ Error saving theme to Firestore:', error);
+            });
+        }
+        
         emit('user-theme-updated', themes[handle]);
     },
     
