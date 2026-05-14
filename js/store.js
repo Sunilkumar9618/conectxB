@@ -199,7 +199,6 @@ views.store = async function() {
 
                             <div class="product-info">
                                 <h3 class="product-title">${product.title}</h3>
-                                <div class="product-price">${formatCurrency(product.price)}</div>
 
                                 <div class="product-status">
                                     <span class="badge badge-${product.status === 'published' ? 'success' : 'warning'}">
@@ -258,13 +257,6 @@ function showAddProductModal() {
             <textarea class="form-textarea" id="add-product-desc" placeholder="Describe your product..."></textarea>
         </div>
 
-        <div class="form-group">
-            <label class="form-label required">Price</label>
-            <div class="input-group">
-                <span class="input-group-addon">$</span>
-                <input type="number" class="form-input" id="add-product-price" placeholder="29.99" min="0.01" step="0.01">
-            </div>
-        </div>
 
         <div class="form-group">
             <label class="form-label">Category</label>
@@ -336,12 +328,12 @@ function showAddProductModal() {
 async function addProductHandler(modal) {
     const name = document.getElementById('add-product-name').value;
     const desc = document.getElementById('add-product-desc').value;
-    const price = parseFloat(document.getElementById('add-product-price').value);
+    const price = 0;
     const category = document.getElementById('add-product-category').value;
     const imageInput = document.getElementById('add-product-image');
     const url = document.getElementById('add-product-url').value;
 
-    if (!name || !price || !imageInput.files || imageInput.files.length === 0) {
+    if (!name || !imageInput.files || imageInput.files.length === 0) {
         showToast('Please fill in all required fields and upload an image', 'error');
         return;
     }
@@ -397,13 +389,7 @@ function showEditProductModal(productId) {
             <textarea class="form-textarea" id="edit-product-desc">${product.description || ''}</textarea>
         </div>
 
-        <div class="form-group">
-            <label class="form-label required">Price</label>
-            <div class="input-group">
-                <span class="input-group-addon">$</span>
-                <input type="number" class="form-input" id="edit-product-price" value="${product.price}" min="0.01" step="0.01">
-            </div>
-        </div>
+        
 
         <div class="form-group">
             <label class="form-label">Category</label>
@@ -475,12 +461,12 @@ function showEditProductModal(productId) {
 async function editProductHandler(productId, modal) {
     const name = document.getElementById('edit-product-name').value;
     const desc = document.getElementById('edit-product-desc').value;
-    const price = parseFloat(document.getElementById('edit-product-price').value);
+    const price = store.getProduct(productId)?.price;
     const category = document.getElementById('edit-product-category').value;
     const imageInput = document.getElementById('edit-product-image');
     const url = document.getElementById('edit-product-url').value;
 
-    if (!name || !price) {
+    if (!name ) {
         showToast('Please fill in all required fields', 'error');
         return;
     }
