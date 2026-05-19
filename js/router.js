@@ -95,12 +95,22 @@ const router = {
         emit('view-changed', { route });
     },
     
-    // Start router
     async start() {
-    // First, try to handle clean URL paths (e.g., /Homelander211)
-    const cleanUrlHandled = handleCleanUrl();
-    if (cleanUrlHandled) {
-        return; // Public page will render
+    // First, try to handle clean URL paths (e.g., /@Homelander211)
+    const path = window.location.pathname;
+    if (path && path.startsWith('/@')) {
+        const handle = path.replace('/@', '').trim();
+        if (handle && !handle.includes('.')) {
+            // Load the public page view directly
+            await this.loadView('page', [handle]);
+            
+            // Listen for hash changes for normal navigation
+            window.addEventListener('hashchange', async () => {
+                const { route: newRoute, params: newParams } = getHashRoute();
+                await this.loadView(newRoute, newParams);
+            });
+            return;
+        }
     }
     
     // If no clean URL, fallback to hash routing
@@ -114,7 +124,7 @@ const router = {
         const { route: newRoute, params: newParams } = getHashRoute();
         await this.loadView(newRoute, newParams);
     });
-    }
+}
 };
  
 // ---- ROUTE GUARDS (MIDDLEWARE) ----
