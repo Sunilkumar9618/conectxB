@@ -5,12 +5,10 @@
 // Handle clean URL paths (e.g., /Homelander211 instead of /#page/Homelander211)
 function handleCleanUrl() {
     const path = window.location.pathname;
-    
-    // If path is /SomeHandle (not root, not a file)
-    if (path && path !== '/' && !path.includes('.')) {
-        const handle = path.replace('/', '').trim();
-        if (handle) {
-            // Route to public page with this handle
+    // Check if path starts with /@handle pattern
+    if (path && path.startsWith('/@')) {
+        const handle = path.replace('/@', '').trim();
+        if (handle && !handle.includes('.')) {
             router.navigate('page', handle);
             return true;
         }
@@ -99,17 +97,23 @@ const router = {
     
     // Start router
     async start() {
-        // Initial route
-        let { route, params } = getHashRoute();
-        if (!route) route = 'home';
-        
-        await this.loadView(route, params);
-        
-        // Listen for hash changes
-        window.addEventListener('hashchange', async () => {
-            const { route: newRoute, params: newParams } = getHashRoute();
-            await this.loadView(newRoute, newParams);
-        });
+    // First, try to handle clean URL paths (e.g., /Homelander211)
+    const cleanUrlHandled = handleCleanUrl();
+    if (cleanUrlHandled) {
+        return; // Public page will render
+    }
+    
+    // If no clean URL, fallback to hash routing
+    let { route, params } = getHashRoute();
+    if (!route) route = 'home';
+    
+    await this.loadView(route, params);
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', async () => {
+        const { route: newRoute, params: newParams } = getHashRoute();
+        await this.loadView(newRoute, newParams);
+    });
     }
 };
  

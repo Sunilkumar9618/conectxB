@@ -1,7 +1,9 @@
 /* ============================================================================
    APP - Main Application Initialization with Firebase
    ============================================================================ */
+//import { inject } from '@vercel/analytics';
 
+//inject();
 // Route guard functions
 async function requireAuth(route, params) {
     if (!auth.isLoggedIn()) {

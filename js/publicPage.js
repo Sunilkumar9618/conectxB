@@ -657,7 +657,61 @@ views.publicPage = async function(handle) {
             #public-profile-wrapper {
                 animation: fadeInUp 0.5s ease forwards;
             }
-            
+            /* ===== TAB SWITCHER ===== */
+#public-tab-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#public-tab-buttons {
+    display: flex;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    padding: 4px;
+    gap: 4px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.public-tab-btn {
+    padding: 10px 28px;
+    border-radius: 50px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: ${userTheme.textColor};
+    background: transparent;
+    opacity: 0.7;
+    font-family: 'Poppins', sans-serif;
+}
+
+.public-tab-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.public-tab-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.tab-content {
+    display: none;
+    width: 100%;
+}
+
+.tab-content.active {
+    display: block;
+}
             /* ===== TABLET RESPONSIVENESS ===== */
             @media (max-width: 768px) {
                 #public-main-content {
@@ -973,38 +1027,71 @@ views.publicPage = async function(handle) {
                         </div>
                     ` : ''}
                     
-                    <!-- Products Section -->
-                    ${products.length > 0 ? `
-                        <div id="public-connectxb-section">
-                            <div id="public-connectxb-logo-text">Featured Products</div>
-                            
-                            <!-- Products Grid -->
-                            <div id="public-products-grid">
-                                ${products.slice(0, 4).map(p => `
-                                    <a href="${p.url || '#'}" target="_blank" rel="noopener" class="public-product-card">
-                                        <div class="public-product-image" ${p.image ? 'style="background-image: url(\'' + p.image + '\')"' : ''}>
-                                            ${!p.image ? '📦' : ''}
-                                        </div>
-                                        <div class="public-product-info">
-                                            <div class="public-product-title">${p.title}</div>
-                                            <span class="product-visit-link">
-                                                <span>Visit</span>
-                                                <svg style="width: 12px; height: 12px; fill: currentColor;" viewBox="0 0 24 24">
-                                                    <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z"/>
-                                                    <path d="M11 3v2h3.59l-9.83 9.83 1.41 1.41L16 7.41V11h2V3h-8z"/>
-                                                </svg>
-                                            </span>
-                                        </div>
-                                    </a>
-                                `).join('')}
-                            </div>
-                            
-                            ${products.length > 4 ? '<div style="text-align: center; margin-top: 24px;"><button class="public-block-item" style="width: 100%; margin: 0; text-align: center; justify-content: center;" onclick="window.openProductsModal(\'' + handle + '\');">View All Products →</button></div>' : ''}
-                        </div>
-                    ` : ''}
+                  <!-- Tab Switcher -->
+${(visibleBlocks.length > 0 || products.length > 0) ? `
+    <div id="public-tab-container">
+        <!-- Tab Buttons -->
+        <div id="public-tab-buttons">
+            ${visibleBlocks.length > 0 ? `
+                <button class="public-tab-btn active" id="tab-links" onclick="window.switchTab('links')">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+                    Links
+                </button>
+            ` : ''}
+            ${products.length > 0 ? `
+                <button class="public-tab-btn ${visibleBlocks.length === 0 ? 'active' : ''}" id="tab-shop" onclick="window.switchTab('shop')">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M7 4V3c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v1h5c.6 0 1 .4 1 1v2c0 .4-.2.7-.5.9L19 20c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2L1.5 7.9C1.2 7.7 1 7.4 1 7V5c0-.6.4-1 1-1h5zm2 0h6V3H9v1z"/></svg>
+                    Shop
+                </button>
+            ` : ''}
+        </div>
+
+        <!-- Links Tab Content -->
+        ${visibleBlocks.length > 0 ? `
+            <div id="tab-content-links" class="tab-content ${visibleBlocks.length > 0 ? 'active' : ''}">
+                <div id="public-blocks-container">
+                    ${visibleBlocks.map(block => `
+                        <a href="${block.data.url || '#'}" target="_blank" rel="noopener" class="public-block-item">
+                            <span class="public-block-icon">${block.data.icon || '🔗'}</span>
+                            <span class="public-block-title">${block.data.title || block.type}</span>
+                            <span class="public-block-arrow">→</span>
+                        </a>
+                    `).join('')}
                 </div>
             </div>
-        </div>
+        ` : ''}
+
+        <!-- Shop Tab Content -->
+        ${products.length > 0 ? `
+            <div id="tab-content-shop" class="tab-content ${visibleBlocks.length === 0 ? 'active' : ''}">
+                <div id="public-products-grid">
+                    ${products.filter(p => p.featured !== false).slice(0, 4).map(p => `
+                        <a href="${p.url || '#'}" target="_blank" rel="noopener" class="public-product-card">
+                            <div class="public-product-image" ${p.image ? 'style="background-image: url(\'' + p.image + '\')"' : ''}>
+                                ${!p.image ? '📦' : ''}
+                            </div>
+                            <div class="public-product-info">
+                                <div class="public-product-title">${p.title}</div>
+                                <span class="product-visit-link">
+                                    <span>Visit</span>
+                                    <svg style="width: 12px; height: 12px; fill: currentColor;" viewBox="0 0 24 24">
+                                        <path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7z"/>
+                                        <path d="M11 3v2h3.59l-9.83 9.83 1.41 1.41L16 7.41V11h2V3h-8z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
+                    `).join('')}
+                </div>
+                ${products.filter(p => p.featured !== false).length > 4 ? `
+                    <div style="text-align: center; margin-top: 16px;">
+                        <button class="public-block-item" style="width: 100%; margin: 0; text-align: center; justify-content: center;" onclick="window.openProductsModal('${handle}');">View All Products →</button>
+                    </div>
+                ` : ''}
+            </div>
+        ` : ''}
+    </div>
+` : ''}
         
         <!-- Products Modal -->
         <div id="public-products-modal" style="display: none;">
@@ -1096,6 +1183,19 @@ window.closeProductsModal = function() {
         modal.style.display = 'none';
         document.body.style.overflow = 'auto';
     }
+};
+window.switchTab = function(tab) {
+    // Update buttons
+    document.querySelectorAll('.public-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById('tab-' + tab)?.classList.add('active');
+
+    // Update content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById('tab-content-' + tab)?.classList.add('active');
 };
 
 // Helper to show toast notifications
