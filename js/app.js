@@ -77,10 +77,10 @@ async function initApp() {
     initializeGlobalListeners();
     
     // Try clean URL first (e.g., /Homelander211), then fall back to hash routing
-    if (!handleCleanUrl()) {
+    
         // Start router for hash-based routing
         await router.start();
-    }
+    
     
     // Hide loading screen
     setTimeout(() => {
@@ -247,8 +247,8 @@ if (window.performance && window.performance.timing) {
 // SERVICE WORKER (Optional - for offline support)
 // ============================================================================
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
-        console.warn('⚠️ Service Worker registration failed:', error);
-    });
-}
+//if ('serviceWorker' in navigator) {
+//  //  navigator.serviceWorker.register('/sw.js').catch((error) => {
+//    //    console.warn('⚠️ Service Worker registration failed:', error);
+//    //});
+//}
