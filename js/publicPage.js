@@ -114,7 +114,13 @@ views.publicPage = async function(handle) {
     
     const html = `
         <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+#public-page-container, #public-page-container * {
+    font-family: 'Poppins', sans-serif;
+}
             
             html, body {
                 width: 100%;
@@ -305,20 +311,20 @@ views.publicPage = async function(handle) {
             }
             
             .public-social-icon {
-                width: 40px;
-                height: 40px;
-                background: rgba(255, 255, 255, 0.15);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 18px;
-                cursor: pointer;
-                text-decoration: none;
-                color: inherit;
-                transition: all 0.3s ease;
-            }
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+}
             
             .public-social-icon:hover {
                 background: rgba(255, 255, 255, 0.25);
@@ -400,13 +406,13 @@ views.publicPage = async function(handle) {
             
             /* ===== PRODUCTS GRID ===== */
             #public-products-grid {
-                width: 100%;
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 16px;
-                margin-top: 20px;
-                padding: 0 10px;
-            }
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+    padding: 0 10px;
+}
             
             .public-product-card {
                 background: rgba(0, 0, 0, 0.15);
@@ -430,17 +436,18 @@ views.publicPage = async function(handle) {
             }
             
             .public-product-image {
-                width: 100%;
-                height: 120px;
-                background-size: cover;
-                background-position: center;
-                background-color: rgba(255, 255, 255, 0.1);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 48px;
-                position: relative;
-            }
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-size: cover;
+    background-position: center top;
+    background-color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    position: relative;
+    overflow: hidden;
+}
             
             .public-product-info {
                 padding: 12px;
@@ -452,12 +459,13 @@ views.publicPage = async function(handle) {
             }
             
             .public-product-title {
-                font-weight: 600;
-                font-size: 13px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: inherit;
+}
             
             .product-visit-link {
                 width: 100%;
@@ -494,27 +502,30 @@ views.publicPage = async function(handle) {
             
             /* ===== MODAL STYLES ===== */
             .public-modal-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: flex-end;
-                z-index: 1000;
-                animation: fadeIn 0.3s ease;
-            }
-            
-            .public-modal-content {
-                width: 100%;
-                background: white;
-                border-radius: 20px 20px 0 0;
-                padding: 24px 20px;
-                max-height: 80vh;
-                overflow-y: auto;
-                animation: slideUp 0.3s ease;
-            }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+    padding: 24px;
+}
+
+.public-modal-content {
+    width: 100%;
+    max-width: 760px;
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
             
             .modal-header {
                 display: flex;
@@ -548,21 +559,23 @@ views.publicPage = async function(handle) {
             }
             
             .modal-products-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-            }
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
             
             .modal-product-card {
-                background: #f5f5f5;
-                border: 1px solid #e0e0e0;
-                border-radius: 12px;
-                overflow: hidden;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                text-decoration: none;
-                color: inherit;
-            }
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+}
             
             .modal-product-card:hover {
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -570,17 +583,18 @@ views.publicPage = async function(handle) {
             }
             
             .modal-product-image {
-                width: 100%;
-                height: 100px;
-                background-size: cover;
-                background-position: center;
-                background-color: #f0f0f0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 40px;
-            }
-            
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-size: cover;
+    background-position: center top;
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    overflow: hidden;
+    flex-shrink: 0;
+} 
             .modal-product-info {
                 padding: 12px;
                 display: flex;
@@ -755,10 +769,10 @@ views.publicPage = async function(handle) {
                 }
                 
                 .public-social-icon {
-                    width: 36px;
-                    height: 36px;
-                    font-size: 16px;
-                }
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+}
                 
                 .public-block-item {
                     padding: 12px;
@@ -782,29 +796,86 @@ views.publicPage = async function(handle) {
                 }
                 
                 #public-products-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 10px;
-                    padding: 0;
-                }
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0;
+}
                 
                 .public-product-image {
-                    height: 100px;
-                    font-size: 40px;
-                }
+    aspect-ratio: 1 / 1;
+}
                 
                 .public-modal-overlay {
-                    align-items: flex-end;
-                }
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+    }
                 
+                .public-product-info {
+    padding: 8px;
+    gap: 6px;
+}
+
+.public-product-title {
+    font-size: 11px;
+}
+
+.product-visit-link {
+    padding: 6px;
+    font-size: 11px;
+}
                 .public-modal-content {
-                    border-radius: 20px 20px 0 0;
-                    padding: 20px 16px;
-                }
+        border-radius: 24px 24px 0 0;
+        max-width: 100%;
+        max-height: 88vh;
+        padding: 20px 16px 32px;
+    }
+
+    .modal-header {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f0f0;
+    }
                 
                 .modal-products-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 10px;
-                }
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+                .modal-title {
+        font-size: 16px;
+        font-weight: 700;
+    }
+        .modal-product-image {
+        aspect-ratio: 1 / 1;
+        border-radius: 0;
+    }
+        .modal-product-card {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: none;
+    }
+        .modal-product-info {
+        padding: 10px;
+        gap: 8px;
+    }
+        .modal-product-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #222;
+    }
+        .modal-product-link {
+        padding: 9px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+        .modal-close-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+        background: #f5f5f5;
+    }
             }
             
             /* ===== VERY SMALL MOBILE ===== */
@@ -828,14 +899,18 @@ views.publicPage = async function(handle) {
                 }
                 
                 #public-products-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 8px;
-                }
-                
-                .public-product-image {
-                    height: 90px;
-                    font-size: 36px;
-                }
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.public-product-image {
+    aspect-ratio: 1 / 1;
+    font-size: 36px;
+}
+
+.public-product-title {
+    font-size: 10px;
+}
             }
         </style>
         
@@ -971,24 +1046,22 @@ views.publicPage = async function(handle) {
    ============================================================================ */
 
 window.getSocialIconsSVG = function(platforms) {
-    const socialIcons = {
-        facebook:  'fab fa-facebook-f',
-        twitter:   'fab fa-twitter',
-        instagram: 'fab fa-instagram',
-        linkedin:  'fab fa-linkedin-in',
-        youtube:   'fab fa-youtube',
-        tiktok:    'fab fa-tiktok',
-        whatsapp:  'fab fa-whatsapp',
-        email:     'fas fa-envelope'
+    const socialSVGs = {
+        facebook:  '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+        twitter:   '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+        instagram: '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+        linkedin:  '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.475-2.236-1.986-2.236-1.081 0-1.722.722-2.004 1.418-.103.25-.129.599-.129.948v5.439h-3.554s.05-8.736 0-9.646h3.554v1.364c.43-.665 1.199-1.61 2.922-1.61 2.134 0 3.732 1.388 3.732 4.369v5.523zM5.337 8.855c-1.144 0-1.915-.762-1.915-1.715 0-.953.77-1.715 1.96-1.715 1.188 0 1.914.762 1.939 1.715 0 .953-.751 1.715-1.984 1.715zm1.946 11.597H3.392V9.806h3.891v10.646zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg>',
+        youtube:   '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+        tiktok:    '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z"/></svg>',
+        whatsapp: '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.38 1.26 4.81L2 22l5.44-1.42a9.878 9.878 0 0 0 4.6 1.14c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm5.52 14.15c-.23.63-1.35 1.21-1.85 1.27-.5.06-1.01.23-3.39-.71-2.84-1.11-4.66-3.98-4.8-4.17-.14-.18-1.13-1.51-1.13-2.88s.71-2.04.97-2.32c.25-.28.54-.35.72-.35l.52.01c.17 0 .39-.06.61.47.23.54.77 1.88.84 2.02.07.13.11.29.02.47-.09.18-.14.29-.27.45-.13.16-.28.36-.4.48-.13.13-.27.27-.12.53.16.26.69 1.14 1.48 1.84.98.87 1.81 1.14 2.07 1.27.26.13.41.11.56-.06.16-.18.67-.78.85-1.05.18-.26.35-.22.59-.13.24.09 1.54.73 1.8.86.26.13.44.19.51.3.06.11.06.64-.17 1.27z"/></svg>',
+        email:     '<svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>'
     };
 
     return Object.entries(platforms).map(([key, url]) => {
         if (!url) return '';
-        const iconClass = socialIcons[key] || 'fas fa-link';
+        const icon = socialSVGs[key] || socialSVGs.email;
         const href = key === 'email' ? 'mailto:' + url : url;
-        return `<a href="${href}" target="_blank" rel="noopener" class="public-social-icon" title="${key}">
-            <i class="${iconClass}" style="font-size: 18px; color: white;"></i>
-        </a>`;
+        return `<a href="${href}" target="_blank" rel="noopener" class="public-social-icon" title="${key}">${icon}</a>`;
     }).join('');
 };
 
